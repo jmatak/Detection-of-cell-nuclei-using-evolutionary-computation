@@ -1,10 +1,12 @@
 import random
-import morphology_transformation
+import morphology_transformation as mt
+import structuring_elements as se
 
 
 def get_random_transform():
-    return random.choice(morphology_transformation.defined_transforms)
+    return random.choice(mt.defined_transforms)
 
 
 def get_random_kernel():
-    return random.randint(0, 27)
+    return se.elements[random.randint(1, 27)]
+

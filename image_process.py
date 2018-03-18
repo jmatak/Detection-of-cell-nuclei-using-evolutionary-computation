@@ -3,7 +3,6 @@ import numpy as np
 import os
 import joblib
 
-DEFAULT_KERNEL = np.ones((5, 5), np.uint8)
 DEFAULT_FOLDER = 'stage1_train'
 
 IMAGES = joblib.load('images.dict')
@@ -11,8 +10,11 @@ MASKS = joblib.load('masks.dict')
 
 
 def process_image(image, transformations):
+    """
+    Obrada slike na temelju zadanih informacija, koristi se Otsu treshold metoda
+    """
     for t in transformations:
-        image = t.transformation(image, DEFAULT_KERNEL)
+        image = t.transformation(image, t.kernel)
 
     img_grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     ret, imgf = cv2.threshold(img_grey, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -20,10 +22,16 @@ def process_image(image, transformations):
 
 
 def read_img(directory):
+    """
+    Funkcija za dohvaćanje slike iz direktorija.
+    """
     return cv2.imread(os.path.join(directory, os.listdir(directory)[0]))
 
 
 def read_mask(directory):
+    """
+    Funkcija za spajanje svih maski unutar jednog direktorija.
+    """
     for i, filename in enumerate(next(os.walk(directory))[2]):
         mask_path = os.path.join(directory, filename)
         mask_tmp = cv2.imread(mask_path)
@@ -35,6 +43,9 @@ def read_mask(directory):
 
 
 def init():
+    """
+    Preprocesiranje slika, učitavanje u memoriju prije pokretanja programa.
+    """
     folders = os.listdir('stage1_train')
     length = len(folders)
     for i, v in enumerate(folders):
@@ -48,4 +59,3 @@ def init():
 
     joblib.dump(IMAGES, 'images.dict', compress=3)
     joblib.dump(MASKS, 'masks.dict', compress=3)
-

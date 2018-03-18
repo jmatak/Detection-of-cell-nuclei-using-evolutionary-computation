@@ -64,7 +64,7 @@ def evaluate(individual):
 def create(Individual, length):
     individual = Individual()
     for i in range(random.randint(1, length)):
-        individual.append(MorphologyTransformation(morpho_encoder.get_random_transform(), random.randint(0, 27)))
+        individual.append(MorphologyTransformation(morpho_encoder.get_random_transform(), morpho_encoder.get_random_kernel()))
     return individual
 
 
