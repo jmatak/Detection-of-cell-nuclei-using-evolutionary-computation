@@ -3,14 +3,7 @@ from deap import base, creator, tools, algorithms
 from scoop import futures
 import numpy
 import morphology_transformation
-
-ALLELE_MUTATION_CHANCE = 0.2
-TOURNAMENT_SIZE = 3
-POPULATION_SIZE = 30
-CROSS_PROBABILITY = 0.5
-MUTATION_PROBABILITY = 0.5
-NUMB_OF_GENERATIONS = 100
-INITIAL_IND_LENGTH = 10
+from parameters import *
 
 # Kreiranje funkcije fitnesa i opis jedinke
 # Jedinka je lista Morfoloških transformacija
@@ -23,10 +16,12 @@ toolbox = base.Toolbox()
 toolbox.register("individual", morphology_transformation.create, creator.Individual, length=INITIAL_IND_LENGTH)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-toolbox.register("evaluate", morphology_transformation.evaluate)
+toolbox.register("evaluate", morphology_transformation.evaluate_weighted)
 toolbox.register("mate", morphology_transformation.cross)
 toolbox.register("mutate", morphology_transformation.mutate, mutation_chance=ALLELE_MUTATION_CHANCE)
 toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
+
+#Otkomentirati liniju za paralelizam (parametri: -m scoop)
 #toolbox.register("map", futures.map)
 
 

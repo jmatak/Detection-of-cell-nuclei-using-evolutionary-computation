@@ -4,8 +4,9 @@ import morpho_encoder
 import image_process
 import copy
 import structuring_elements as se
+from parameters import *
 
-TRAIN_NO = 100
+cv2.useOptimized()
 
 
 class MorphologyTransformation:
@@ -58,7 +59,7 @@ def compare(processed, mask):
             elif i and not j[0]:
                 fp += 1
 
-    return ((tp + tn) / (tp + tn + fn + fp)) * 100
+    return ((tp) / (tp + fn + fp)) * 100
 
 
 def evaluate(individual):
@@ -71,6 +72,37 @@ def evaluate(individual):
         mask = image_process.MASKS[name]
 
         sum += compare(processed, mask)
+
+    return (sum / TRAIN_NO),
+
+
+def compare_weighted(processed, mask):
+    tp, tn, fp, fn = 0, 0, 0, 0
+    for p, m in zip(processed, mask):
+        for i, j in zip(p, m):
+            if not i and not j[0]:
+                tn += 1
+            elif i and j[0]:
+                tp += 1
+            elif not i and j[0]:
+                fn += 1
+            elif i and not j[0]:
+                fp += 1
+
+    tp *= 10; fp *= 15; fn*=5
+    return ((tp) / (tp + fn + fp)) * 100
+
+
+def evaluate_weighted(individual):
+    sum = 0
+    for i, (name, img) in enumerate(image_process.IMAGES.items()):
+        if i == TRAIN_NO:
+            break
+
+        processed = image_process.process_image(copy.copy(img), individual)
+        mask = image_process.MASKS[name]
+
+        sum += compare_weighted(processed, mask)
 
     return (sum / TRAIN_NO),
 
