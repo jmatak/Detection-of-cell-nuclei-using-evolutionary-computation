@@ -1,6 +1,10 @@
 import numpy as np
-import cv2
+import morphology_transformation as mt
+import numpy
 
+"""
+Predefinirane transformacijske matrice.
+"""
 elements = {1: np.array([[1, 0], [0, 1]], dtype=np.uint8),
             2: np.array([[0, 1], [1, 0]], dtype=np.uint8),
             3: np.ones((2, 2)),
@@ -44,3 +48,38 @@ elements = {1: np.array([[1, 0], [0, 1]], dtype=np.uint8),
             27: np.array([[1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0], [0, 0, 0, 1, 0, 0, 0],
                           [0, 0, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 1]], dtype=np.uint8)
             }
+
+
+def to_string(individual):
+    string = "("
+    for i, array in elements.items():
+        if numpy.array_equal(array, individual.kernel):
+            string += str(i)
+            break
+
+
+    string += ","
+
+    if (individual.transformation == mt.dilate):
+        string += "D"
+
+    if (individual.transformation == mt.erode):
+        string += "E"
+
+    if (individual.transformation == mt.open):
+        string += "O"
+
+    if (individual.transformation == mt.close):
+        string += "C"
+
+    if (individual.transformation == mt.gradient):
+        string += "G"
+
+    if (individual.transformation == mt.top_hat):
+        string += "TH"
+
+    if (individual.transformation == mt.black_hat):
+        string += "BH"
+
+    string += ")"
+    return string

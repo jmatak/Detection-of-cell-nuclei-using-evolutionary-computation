@@ -1,16 +1,16 @@
 from deap import base, creator, tools, algorithms
+#Paralelizam
+from scoop import futures
 import numpy
 import morphology_transformation
-import cv2
-import image_process
 
-ALLELE_MUTATION_CHANCE = 0.1
+ALLELE_MUTATION_CHANCE = 0.2
 TOURNAMENT_SIZE = 3
-POPULATION_SIZE = 20
-CROSS_PROBABILITY = 0.7
-MUTATION_PROBABILITY = 0.3
-NUMB_OF_GENERATIONS = 10
-INITIAL_IND_LENGTH = 8
+POPULATION_SIZE = 30
+CROSS_PROBABILITY = 0.5
+MUTATION_PROBABILITY = 0.5
+NUMB_OF_GENERATIONS = 100
+INITIAL_IND_LENGTH = 10
 
 # Kreiranje funkcije fitnesa i opis jedinke
 # Jedinka je lista Morfoloških transformacija
@@ -27,6 +27,7 @@ toolbox.register("evaluate", morphology_transformation.evaluate)
 toolbox.register("mate", morphology_transformation.cross)
 toolbox.register("mutate", morphology_transformation.mutate, mutation_chance=ALLELE_MUTATION_CHANCE)
 toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
+#toolbox.register("map", futures.map)
 
 
 def main():
@@ -48,5 +49,6 @@ def main():
 
 
 if __name__ == "__main__":
+    import image_viewer as iw
     results = main()
-    print(results[2])
+    iw.viewer(results[2][0])

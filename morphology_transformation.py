@@ -3,8 +3,10 @@ import random
 import morpho_encoder
 import image_process
 import copy
+import structuring_elements as se
 
-TRAIN_NO = 40
+TRAIN_NO = 100
+
 
 class MorphologyTransformation:
     def __init__(self, transformation, kernel):
@@ -12,7 +14,7 @@ class MorphologyTransformation:
         self.kernel = kernel
 
     def __repr__(self):
-        return '{}-{}'.format(self.transformation, self.kernel)
+        return se.to_string(self)
 
 
 def erode(image, kernel):
@@ -31,10 +33,22 @@ def close(image, kernel):
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
 
+def gradient(image, kernel):
+    return cv2.morphologyEx(image, cv2.MORPH_GRADIENT, kernel)
+
+
+def top_hat(image, kernel):
+    return cv2.morphologyEx(image, cv2.MORPH_TOPHAT, kernel)
+
+
+def black_hat(image, kernel):
+    return cv2.morphologyEx(image, cv2.MORPH_BLACKHAT, kernel)
+
+
 def compare(processed, mask):
-    tp,tn,fp,fn = 0,0,0,0
-    for p,m in zip(processed,mask):
-        for i,j in zip(p,m):
+    tp, tn, fp, fn = 0, 0, 0, 0
+    for p, m in zip(processed, mask):
+        for i, j in zip(p, m):
             if not i and not j[0]:
                 tn += 1
             elif i and j[0]:
@@ -44,12 +58,12 @@ def compare(processed, mask):
             elif i and not j[0]:
                 fp += 1
 
-    return ((tp+tn) / (tp+tn+fn+fp)) * 100
+    return ((tp + tn) / (tp + tn + fn + fp)) * 100
 
 
 def evaluate(individual):
     sum = 0
-    for i,(name,img) in enumerate(image_process.IMAGES.items()):
+    for i, (name, img) in enumerate(image_process.IMAGES.items()):
         if i == TRAIN_NO:
             break
 
@@ -64,7 +78,8 @@ def evaluate(individual):
 def create(Individual, length):
     individual = Individual()
     for i in range(random.randint(1, length)):
-        individual.append(MorphologyTransformation(morpho_encoder.get_random_transform(), morpho_encoder.get_random_kernel()))
+        individual.append(
+            MorphologyTransformation(morpho_encoder.get_random_transform(), morpho_encoder.get_random_kernel()))
     return individual
 
 
@@ -105,4 +120,4 @@ def _mutate_kernel(morph):
     morph.kernel = morpho_encoder.get_random_kernel()
 
 
-defined_transforms = [dilate, erode, open, close]
+defined_transforms = [dilate, erode, open, close, gradient, top_hat, black_hat]

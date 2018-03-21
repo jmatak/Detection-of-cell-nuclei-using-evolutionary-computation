@@ -2,11 +2,16 @@ import cv2
 import numpy as np
 import os
 import joblib
+import timeit
 
 DEFAULT_FOLDER = 'stage1_train'
 
+start = timeit.default_timer()
 IMAGES = joblib.load('images.dict')
 MASKS = joblib.load('masks.dict')
+stop = timeit.default_timer()
+
+print('Slike učitane za ' + str(stop - start) + 's !')
 
 
 def process_image(image, transformations):
@@ -59,3 +64,7 @@ def init():
 
     joblib.dump(IMAGES, 'images.dict', compress=3)
     joblib.dump(MASKS, 'masks.dict', compress=3)
+
+
+if __name__ == '__main__':
+    init()
