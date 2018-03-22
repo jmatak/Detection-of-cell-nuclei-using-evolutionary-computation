@@ -1,9 +1,11 @@
 from deap import base, creator, tools, algorithms
+import image_process
 #Paralelizam
 from scoop import futures
 import numpy
 import morphology_transformation
 from parameters import *
+import joblib
 
 # Kreiranje funkcije fitnesa i opis jedinke
 # Jedinka je lista Morfoloških transformacija
@@ -16,13 +18,13 @@ toolbox = base.Toolbox()
 toolbox.register("individual", morphology_transformation.create, creator.Individual, length=INITIAL_IND_LENGTH)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-toolbox.register("evaluate", morphology_transformation.evaluate_weighted)
+toolbox.register("evaluate", morphology_transformation.evaluate)
 toolbox.register("mate", morphology_transformation.cross)
 toolbox.register("mutate", morphology_transformation.mutate, mutation_chance=ALLELE_MUTATION_CHANCE)
 toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
 
 #Otkomentirati liniju za paralelizam (parametri: -m scoop)
-#toolbox.register("map", futures.map)
+# toolbox.register("map", futures.map)
 
 
 def main():
@@ -42,8 +44,14 @@ def main():
 
     return pop, logbook, hof
 
+def evolution():
+    results = main()
+    joblib.dump(results[2][0], "best.ind")
+    view(results[2][0])
+
+def view(ind):
+    import image_viewer as iw
+    iw.viewer(ind)
 
 if __name__ == "__main__":
-    import image_viewer as iw
-    results = main()
-    iw.viewer(results[2][0])
+    evolution()
