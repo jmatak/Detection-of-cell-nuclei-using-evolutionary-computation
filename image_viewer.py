@@ -8,6 +8,10 @@ root, panelA, panelB, panelC, individual = None, None, None, None, None
 
 
 def select_image():
+    """
+    Metoda za dohvaćanje slike s računala i njeno daljnje procesuiranje
+    """
+
     global panelA, panelB, panelC, root, individual
 
     path = filedialog.askopenfilename(initialdir="./", title="Select file",
@@ -52,6 +56,11 @@ def select_image():
 
 
 def viewer(ind):
+    """
+    Metoda koja nakon evolucijske metode iscrtava korisničko sučelje za prepoznavanje jezgri stanica.
+
+    :param ind: Zadana jedinka transformacije
+    """
     global root, individual
 
     root = Tk()

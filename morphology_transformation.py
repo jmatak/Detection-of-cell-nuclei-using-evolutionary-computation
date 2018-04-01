@@ -5,11 +5,17 @@ import image_process
 import copy
 import structuring_elements as se
 from parameters import *
+import numpy as np
 
 cv2.useOptimized()
 
 
 class MorphologyTransformation:
+    """
+    Klasa koja definira morfološku trasnformaciju koja se sastoji od Transformacije i njoj pripadnog strukturnog
+    elementa.
+    """
+
     def __init__(self, transformation, kernel):
         self.transformation = transformation
         self.kernel = kernel
@@ -19,11 +25,11 @@ class MorphologyTransformation:
 
 
 def erode(image, kernel):
-    return cv2.erode(image, kernel, iterations=1)
+    return cv2.erode(image, kernel)
 
 
 def dilate(image, kernel):
-    return cv2.dilate(image, kernel, iterations=1)
+    return cv2.dilate(image, kernel)
 
 
 def open(image, kernel):
@@ -47,6 +53,16 @@ def black_hat(image, kernel):
 
 
 def compare(processed, mask):
+    """
+    Funkcija za usporedbu procesuirane slike i njoj pripadne maske.
+
+    :param processed: Procesuirana slika
+    :param mask: Pripadna maska
+    :return: Postotak preklapanja procesuirane slike i pripremljene maske
+    """
+    background = image_process.kmeans(processed, 1)
+    if background > np.array(128):
+        processed = (255 - processed)
     tp, tn, fp, fn = 0, 0, 0, 0
     for p, m in zip(processed, mask):
         for i, j in zip(p, m):
@@ -59,10 +75,16 @@ def compare(processed, mask):
             elif i and not j[0]:
                 fp += 1
 
-    return ((tp) / (tp + fn + fp)) * 100
+    return ((tp + tn) / (tp + tn + fn + fp)) * 100
 
 
 def evaluate(individual):
+    """
+    Evaluacija jedinke, usporedba s pripadnom maskom.
+
+    :param individual: Jedinka za evaluaciju
+    :return: Evaluacija jedinke
+    """
     sum = 0
     for i, (name, img) in enumerate(image_process.IMAGES.items()):
         if i == TRAIN_NO:
@@ -77,6 +99,14 @@ def evaluate(individual):
 
 
 def compare_weighted(processed, mask):
+    """
+    Funkcija za usporedbu procesuirane slike i njoj pripadne maske. Na procjenu više utječe točno predviđeni pixeli kao
+    i pozitivni negativni pixeli
+
+    :param processed: Procesuirana slika
+    :param mask: Pripadna maska
+    :return: Postotak preklapanja procesuirane slike i pripremljene maske
+    """
     tp, tn, fp, fn = 0, 0, 0, 0
     for p, m in zip(processed, mask):
         for i, j in zip(p, m):
@@ -89,11 +119,19 @@ def compare_weighted(processed, mask):
             elif i and not j[0]:
                 fp += 1
 
-    tp *= 10; fp *= 15; fn*=5
+    tp *= 10
+    fp *= 15
+    fn *= 5
     return ((tp) / (tp + fn + fp)) * 100
 
 
 def evaluate_weighted(individual):
+    """
+    Težinska evaluacija jedinke, usporedba s pripadnom maskom.
+
+    :param individual: Jedinka za evaluaciju
+    :return: Evaluacija jedinke
+    """
     sum = 0
     for i, (name, img) in enumerate(image_process.IMAGES.items()):
         if i == TRAIN_NO:
@@ -108,6 +146,13 @@ def evaluate_weighted(individual):
 
 
 def create(Individual, length):
+    """
+    Kreiranje jedinke, zadaje se jedinka od N transformacijskih funkcija sa pripadnim transformacijskim matricama.
+
+    :param Individual: Jedinka unutar evolucije
+    :param length: Duljina novostvorene jedinke
+    :return: Novostvorena jedinka
+    """
     individual = Individual()
     for i in range(random.randint(1, length)):
         individual.append(
@@ -116,6 +161,12 @@ def create(Individual, length):
 
 
 def _get_points(ind):
+    """
+    Dohvaćanje točaka za križanje unutar jedinke
+
+    :param ind: Zadana jedinka
+    :return: Dvije točke presjeka
+    """
     cxpoint1 = random.randint(0, len(ind))
     cxpoint2 = random.randint(0, len(ind))
     if cxpoint2 < cxpoint1:
@@ -125,6 +176,13 @@ def _get_points(ind):
 
 
 def cross(ind1, ind2):
+    """
+    Križanje sa dvije zadane točke presjeka te spajanje jedinki.
+
+    :param ind1: Prva jedinka
+    :param ind2: Druga jedinka
+    :return: Dvije jedinke koje su nastale križanjem prethodnih
+    """
     points1 = _get_points(ind1)
     points2 = _get_points(ind2)
 
@@ -145,10 +203,22 @@ def mutate(individual, mutation_chance):
 
 
 def _mutate_transformation(morph):
+    """
+    Mutacija transformacijskog elementa, zamijeni se nasumičnom transformacijom.
+
+    :param morph: Zadana morfološka transformacija
+    :return: Nasumično odabrana transformacij
+    """
     morph.transformation = morpho_encoder.get_random_transform()
 
 
 def _mutate_kernel(morph):
+    """
+    Mutacija struturnog elementa, zamijeni se nasumičnim elementom.
+
+    :param morph: Zadana morfološka transformacija
+    :return: Nasumično odabrani strukturni element
+    """
     morph.kernel = morpho_encoder.get_random_kernel()
 
 

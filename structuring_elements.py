@@ -57,28 +57,27 @@ def to_string(individual):
             string += str(i)
             break
 
-
     string += ","
 
-    if (individual.transformation == mt.dilate):
+    if individual.transformation == mt.dilate:
         string += "D"
 
-    if (individual.transformation == mt.erode):
+    if individual.transformation == mt.erode:
         string += "E"
 
-    if (individual.transformation == mt.open):
+    if individual.transformation == mt.open:
         string += "O"
 
-    if (individual.transformation == mt.close):
+    if individual.transformation == mt.close:
         string += "C"
 
-    if (individual.transformation == mt.gradient):
+    if individual.transformation == mt.gradient:
         string += "G"
 
-    if (individual.transformation == mt.top_hat):
+    if individual.transformation == mt.top_hat:
         string += "TH"
 
-    if (individual.transformation == mt.black_hat):
+    if individual.transformation == mt.black_hat:
         string += "BH"
 
     string += ")"
