@@ -1,6 +1,6 @@
 import cv2
 import random
-import morpho_encoder
+import morpho_util
 import image_process
 import copy
 import structuring_elements as se
@@ -86,15 +86,44 @@ def evaluate(individual):
     :return: Evaluacija jedinke
     """
     sum = 0
+    for i, (name, info) in enumerate(image_process.IMAGES_WITH_INFO.items()):
+        if i == TRAIN_NO:
+            break
+
+        image, gray_image, mask, no_cells = info
+        processed = image_process.process_image(copy.copy(image), individual)
+        detected_cells = image_process.get_number_of_cells(processed)
+
+        if detected_cells > 2* no_cells : detected_cells = 0
+
+        det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
+
+        sum += compare(processed, mask) * det
+
+    return (sum / TRAIN_NO),
+
+
+def evaluateByMaxValue(individual):
+    """
+    Evaluacija jedinke, usporedba s pripadnom maskom. Lista se evaluira redom, najbolja jedinka se uzima kao
+    rezultat usporedbe.
+
+    :param individual: Jedinka za evaluaciju
+    :return: Evaluacija jedinke
+    """
+    sum = 0
     for i, (name, img) in enumerate(image_process.IMAGES.items()):
         if i == TRAIN_NO:
             break
 
-        processed = image_process.process_image(copy.copy(img), individual)
-        mask = image_process.MASKS[name]
+        best = []
+        for transformation in individual:
+            processed = image_process.process_image(copy.copy(img), [transformation])
+            mask = image_process.MASKS[name]
 
-        sum += compare(processed, mask)
+            best.append(compare(processed, mask))
 
+        sum += max(best)
     return (sum / TRAIN_NO),
 
 
@@ -156,7 +185,7 @@ def create(Individual, length):
     individual = Individual()
     for i in range(random.randint(1, length)):
         individual.append(
-            MorphologyTransformation(morpho_encoder.get_random_transform(), morpho_encoder.get_random_kernel()))
+            MorphologyTransformation(morpho_util.get_random_transform(), morpho_util.get_random_kernel()))
     return individual
 
 
@@ -167,8 +196,8 @@ def _get_points(ind):
     :param ind: Zadana jedinka
     :return: Dvije točke presjeka
     """
-    cxpoint1 = random.randint(0, len(ind))
-    cxpoint2 = random.randint(0, len(ind))
+    cxpoint1 = random.randint(0, len(ind) - 1)
+    cxpoint2 = random.randint(0, len(ind) - 1)
     if cxpoint2 < cxpoint1:
         cxpoint1, cxpoint2 = cxpoint2, cxpoint1
 
@@ -183,11 +212,10 @@ def cross(ind1, ind2):
     :param ind2: Druga jedinka
     :return: Dvije jedinke koje su nastale križanjem prethodnih
     """
-    points1 = _get_points(ind1)
-    points2 = _get_points(ind2)
+    m1, m2 = _get_points(ind1)
+    f1, f2 = _get_points(ind2)
 
-    ind1[points1[0]:points1[1]], ind2[points2[0]:points2[1]] \
-        = ind2[points2[0]:points2[1]], ind1[points1[0]:points1[1]]
+    ind1[m1:m2], ind2[f1:f2] = ind2[f1:f2], ind1[m1:m2]
 
     return ind1, ind2
 
@@ -209,7 +237,7 @@ def _mutate_transformation(morph):
     :param morph: Zadana morfološka transformacija
     :return: Nasumično odabrana transformacij
     """
-    morph.transformation = morpho_encoder.get_random_transform()
+    morph.transformation = morpho_util.get_random_transform()
 
 
 def _mutate_kernel(morph):
@@ -219,7 +247,8 @@ def _mutate_kernel(morph):
     :param morph: Zadana morfološka transformacija
     :return: Nasumično odabrani strukturni element
     """
-    morph.kernel = morpho_encoder.get_random_kernel()
+    morph.kernel = morpho_util.get_random_kernel()
 
 
-defined_transforms = [dilate, erode, open, close, gradient, top_hat, black_hat]
+# defined_transforms = [dilate, erode, open, close, gradient, top_hat, black_hat]
+defined_transforms = [dilate, erode, open, close]
