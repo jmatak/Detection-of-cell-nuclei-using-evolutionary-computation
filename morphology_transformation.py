@@ -52,6 +52,27 @@ def black_hat(image, kernel):
     return cv2.morphologyEx(image, cv2.MORPH_BLACKHAT, kernel)
 
 
+def simple_compare(tp, tn, fp, fn):
+    return ((tp + tn) / (tp + tn + fn + fp)) * 100
+
+
+def simple_compare_without_tn(tp, tn, fp, fn):
+    return ((tp) / (tp + fn + fp)) * 100
+
+
+def compare_weighted(tp, tn, fp, fn):
+    """
+    Funkcija za usporedbu procesuirane slike i njoj pripadne maske. Na procjenu više utječe točno predviđeni pixeli kao
+    i pozitivni negativni pixeli
+
+    :return: Postotak preklapanja procesuirane slike i pripremljene maske
+    """
+    tp *= 10
+    fp *= 15
+    fn *= 5
+    return ((tp) / (tp + fn + fp)) * 100
+
+
 def compare(processed, mask):
     """
     Funkcija za usporedbu procesuirane slike i njoj pripadne maske.
@@ -75,7 +96,7 @@ def compare(processed, mask):
             elif i and not j[0]:
                 fp += 1
 
-    return ((tp + tn) / (tp + tn + fn + fp)) * 100
+    return compareFunction(tp, tn, fp, fn)
 
 
 def evaluate(individual):
@@ -94,82 +115,11 @@ def evaluate(individual):
         processed = image_process.process_image(copy.copy(image), individual)
         detected_cells = image_process.get_number_of_cells(processed)
 
-        if detected_cells > 2* no_cells : detected_cells = 0
+        if detected_cells > 2 * no_cells: detected_cells = 0
 
         det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
 
         sum += compare(processed, mask) * det
-
-    return (sum / TRAIN_NO),
-
-
-def evaluateByMaxValue(individual):
-    """
-    Evaluacija jedinke, usporedba s pripadnom maskom. Lista se evaluira redom, najbolja jedinka se uzima kao
-    rezultat usporedbe.
-
-    :param individual: Jedinka za evaluaciju
-    :return: Evaluacija jedinke
-    """
-    sum = 0
-    for i, (name, img) in enumerate(image_process.IMAGES.items()):
-        if i == TRAIN_NO:
-            break
-
-        best = []
-        for transformation in individual:
-            processed = image_process.process_image(copy.copy(img), [transformation])
-            mask = image_process.MASKS[name]
-
-            best.append(compare(processed, mask))
-
-        sum += max(best)
-    return (sum / TRAIN_NO),
-
-
-def compare_weighted(processed, mask):
-    """
-    Funkcija za usporedbu procesuirane slike i njoj pripadne maske. Na procjenu više utječe točno predviđeni pixeli kao
-    i pozitivni negativni pixeli
-
-    :param processed: Procesuirana slika
-    :param mask: Pripadna maska
-    :return: Postotak preklapanja procesuirane slike i pripremljene maske
-    """
-    tp, tn, fp, fn = 0, 0, 0, 0
-    for p, m in zip(processed, mask):
-        for i, j in zip(p, m):
-            if not i and not j[0]:
-                tn += 1
-            elif i and j[0]:
-                tp += 1
-            elif not i and j[0]:
-                fn += 1
-            elif i and not j[0]:
-                fp += 1
-
-    tp *= 10
-    fp *= 15
-    fn *= 5
-    return ((tp) / (tp + fn + fp)) * 100
-
-
-def evaluate_weighted(individual):
-    """
-    Težinska evaluacija jedinke, usporedba s pripadnom maskom.
-
-    :param individual: Jedinka za evaluaciju
-    :return: Evaluacija jedinke
-    """
-    sum = 0
-    for i, (name, img) in enumerate(image_process.IMAGES.items()):
-        if i == TRAIN_NO:
-            break
-
-        processed = image_process.process_image(copy.copy(img), individual)
-        mask = image_process.MASKS[name]
-
-        sum += compare_weighted(processed, mask)
 
     return (sum / TRAIN_NO),
 
@@ -185,7 +135,7 @@ def create(Individual, length):
     individual = Individual()
     for i in range(random.randint(1, length)):
         individual.append(
-            MorphologyTransformation(morpho_util.get_random_transform(), morpho_util.get_random_kernel()))
+            MorphologyTransformation(morpho_util.get_random_transform(), randomKernel()))
     return individual
 
 
@@ -225,7 +175,7 @@ def mutate(individual, mutation_chance):
         if random.random() < mutation_chance:
             _mutate_transformation(t)
         if random.random() < mutation_chance:
-            _mutate_kernel(t)
+            kernelMutationFunction(t)
 
     return individual,
 
@@ -250,5 +200,14 @@ def _mutate_kernel(morph):
     morph.kernel = morpho_util.get_random_kernel()
 
 
+def _mutate_kernel_by_value(morph):
+    for e in np.nditer(morph.kernel, op_flags=['readwrite']):
+        if random.random() < SE_MUTATION_CHANCE:
+            e[...] = 1 - e[...]
+
+
 # defined_transforms = [dilate, erode, open, close, gradient, top_hat, black_hat]
 defined_transforms = [dilate, erode, open, close]
+compareFunction = simple_compare_without_tn
+kernelMutationFunction = _mutate_kernel
+randomKernel = morpho_util.get_random_kernel

@@ -5,6 +5,7 @@ import image_process
 from scoop import futures
 import numpy
 import morphology_transformation
+import morpho_util
 from parameters import *
 import sys
 import joblib
@@ -36,6 +37,12 @@ def printBest(pop):
 
 
 maxValues = []
+populationMovement = []
+
+
+def graphInfo(pop):
+    pop = [p[1][0] for p in pop]
+    for p in pop: populationMovement.append(p)
 
 
 def calculate_max(pop):
@@ -65,6 +72,15 @@ def calculate_median(pop):
     return numpy.median(pop)
 
 
+def makePlots():
+    plt.plot(numpy.array(maxValues))
+    plt.savefig('plots/kretanje_max')
+    plt.close()
+    plt.boxplot(numpy.array(populationMovement))
+    plt.savefig('plots/kretanje_jedinke')
+    plt.close()
+
+
 def genetics():
     pop = toolbox.population(n=POPULATION_SIZE)
     hof = tools.HallOfFame(1)
@@ -75,6 +91,7 @@ def genetics():
     stats.register("STD", calculate_std)
     stats.register("MIN", calculate_min)
     stats.register("MAX", calculate_max)
+    stats.register("GRAPH", graphInfo)
 
     print('Program bez transformacije slike : {}'.format(morphology_transformation.evaluate([])))
     pop, logbook = algorithms.eaSimple(pop, toolbox,
@@ -83,15 +100,13 @@ def genetics():
                                        ngen=NUMB_OF_GENERATIONS,
                                        stats=stats, halloffame=hof, verbose=True)
 
-    plt.plot(numpy.array(maxValues))
-    plt.savefig('Kretanje max')
-    plt.close()
+    makePlots()
     return pop, logbook, hof
 
 
 def evolution():
     results = genetics()
-    joblib.dump(results[2][0], "best.ind")
+    joblib.dump(results[2][0], "transformations/best.ind")
     view(results[2][0])
 
 
@@ -100,14 +115,40 @@ def view(ind):
     iw.viewer(ind)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Nedovoljno ulaznih argumenata, molim odaberite -g ili -e")
+def main():
+    if len(sys.argv) < 2:
+        print("Nedovoljno ulaznih argumenata, molim odaberite -g ili -c")
+        return
+
+    if len(sys.argv) >= 3:
+        if sys.argv[2] == '-s':
+            morphology_transformation.compareFunction = morphology_transformation.simple_compare
+        elif sys.argv[2] == '-stn':
+            morphology_transformation.compareFunction = morphology_transformation.simple_compare_without_tn
+        elif sys.argv[2] == '-w':
+            morphology_transformation.compareFunction = morphology_transformation.compare_weighted
+        else:
+            print("Nevaljan ulazni parametar, molim odaberite -reg ili irr")
+            return
+
+    if len(sys.argv) >= 4:
+        if sys.argv[3] == '-irr':
+            morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel_by_value
+            morphology_transformation.randomKernel = morpho_util.get_random_irregural_kernel
+        elif sys.argv[3] == '-reg':
+            morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel
+            morphology_transformation.randomKernel = morpho_util.get_random_kernel
+        else:
+            print("Nevaljan ulazni parametar, molim odaberite -s, -stn, -w")
 
     if sys.argv[1] == '-g':
         view([])
     elif sys.argv[1] == '-c':
-        image_process.load('images_with_info.dict')
+        image_process.load('images_serialized/images_with_info.dict')
         evolution()
     else:
         print("Nevaljan ulazni parametar, molim odaberite -g ili -c")
+
+
+if __name__ == "__main__":
+    main()

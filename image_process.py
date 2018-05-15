@@ -214,7 +214,7 @@ def initWithInfo():
         print('Broj maski ' + str(no_masks))
         print('Processed : ' + str((i + 1) / length * 100) + "%")
 
-    joblib.dump(IMAGES_WITH_INFO, 'images_with_info.dict', compress=3)
+    joblib.dump(IMAGES_WITH_INFO, 'images_serialized/images_with_info.dict', compress=3)
 
 
 def load(images_folder):

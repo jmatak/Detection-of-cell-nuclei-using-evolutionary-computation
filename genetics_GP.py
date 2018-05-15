@@ -8,8 +8,8 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap import gp
-from scoop import futures
 import numpy as np
+import cv2
 
 
 class ImageProcessor(object):
@@ -38,6 +38,7 @@ class ImageProcessor(object):
             elif np.allclose(self.dominantColor2, np.array([[192], [192]]), atol=64):
                 self.image = out4(image=self.image)
 
+
     def dominantColor1Bipolar(self, out1, out2, image=None):
         """
         Odluka izlaza na temelju dominantne boje unutar slike, odluka je tamna ili svijetla pozadina
@@ -47,6 +48,7 @@ class ImageProcessor(object):
                 self.image = out1(image=self.image)
             else:
                 self.image = out2(image=self.image)
+
 
     def dominantColor1Quadraple(self, out1, out2, out3, out4, image=None):
         """
@@ -62,7 +64,8 @@ class ImageProcessor(object):
             elif np.allclose(self.dominantColor1, np.array([224]), atol=32):
                 self.image = out4(image=self.image)
 
-    def process(self, original, mask, individual):
+
+    def process(self, original, mask, no_cells, individual):
         """
         Vraća razliku originalne slike i maske nakon trasnfomacija zadanih unutar stabla
         :param original: Originalna slika
@@ -71,9 +74,21 @@ class ImageProcessor(object):
         :return:Vrijednost detektirane slike
         """
         self._reset(original, mask)
-        gp.compile(individual, pset)
+        cv2.imshow("Prije", self.image)
+        tree = gp.PrimitiveTree(individual)
+        gp.compile(tree, pset)
+
+
+        detected_cells = image_process.get_number_of_cells(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY))
+
+        if detected_cells > 2 * no_cells: detected_cells = 0
+
+        det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
+
         self.image = image_process.otsu_treshold(self.image)
-        return morphology_transformation.compare(self.image, self.mask)
+        cv2.imshow("threshold", self.image)
+        cv2.waitKey()
+        return morphology_transformation.compare(self.image, self.mask) * det
 
 
 iprocessor = ImageProcessor()
@@ -83,7 +98,7 @@ pset.addPrimitive(iprocessor.dominantColor2Quadraple, 4)
 pset.addPrimitive(iprocessor.dominantColor1Bipolar, 2)
 pset.addPrimitive(iprocessor.dominantColor1Quadraple, 4)
 
-for i in range(5):
+for i in range(4):
     for j in range(1, 28):
         pset.addTerminal(
             lambda image: morphology_transformation.defined_transforms[i](
@@ -96,17 +111,21 @@ creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
-toolbox.register("expr_init", gp.genHalfAndHalf, pset=pset, min_=1, max_=5)
+toolbox.register("expr_init", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 
 def evaluateFunction(individual):
     sum = 0
-    for i, (name, img) in enumerate(image_process.IMAGES.items()):
+    for i, (name, info) in enumerate(image_process.IMAGES_WITH_INFO.items()):
         if i == TRAIN_NO:
             break
-        sum += iprocessor.process(img, image_process.MASKS[name], individual)
+
+        image, gray_image, mask, no_cells = info
+
+        sum += iprocessor.process(image, mask, no_cells, individual)
+
     return (sum / TRAIN_NO),
 
 
@@ -140,5 +159,6 @@ def main():
 
 
 if __name__ == "__main__":
+    image_process.load('images_serialized/images_with_info.dict')
     pop, hof, stats = main()
     print(str(gp.PrimitiveTree(hof[0])))

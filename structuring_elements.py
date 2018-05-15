@@ -3,7 +3,7 @@ import morphology_transformation as mt
 import numpy
 
 """
-Predefinirane transformacijske matrice.
+Predefinirani strukturni elementi.
 """
 elements = {1: np.array([[1, 0], [0, 1]], dtype=np.uint8),
             2: np.array([[0, 1], [1, 0]], dtype=np.uint8),
@@ -50,34 +50,46 @@ elements = {1: np.array([[1, 0], [0, 1]], dtype=np.uint8),
             }
 
 
+def toBinaryArrayString(kernel):
+    string = ""
+    for x in np.nditer(kernel):
+        string += str(x)
+    return string
+
+
 def to_string(individual):
     string = "("
+    found = False
     for i, array in elements.items():
         if numpy.array_equal(array, individual.kernel):
             string += str(i)
+            found = True
             break
+
+    if not found:
+        string += toBinaryArrayString(individual.kernel)
 
     string += ","
 
     if individual.transformation == mt.dilate:
         string += "D"
 
-    if individual.transformation == mt.erode:
+    elif individual.transformation == mt.erode:
         string += "E"
 
-    if individual.transformation == mt.open:
+    elif individual.transformation == mt.open:
         string += "O"
 
-    if individual.transformation == mt.close:
+    elif individual.transformation == mt.close:
         string += "C"
 
-    if individual.transformation == mt.gradient:
+    elif individual.transformation == mt.gradient:
         string += "G"
 
-    if individual.transformation == mt.top_hat:
+    elif individual.transformation == mt.top_hat:
         string += "TH"
 
-    if individual.transformation == mt.black_hat:
+    elif individual.transformation == mt.black_hat:
         string += "BH"
 
     string += ")"
