@@ -9,10 +9,9 @@ from deap import creator
 from deap import tools
 from deap import gp
 import numpy as np
-import cv2
+import random
 
-
-class ImageProcessor(object):
+class ImageProcessor():
     """
     Klasa koja služi za procesuiranje slike transformacijama nastalim iz stablaste strukture.
 
@@ -28,42 +27,42 @@ class ImageProcessor(object):
         """
         Odluka izlaza na temelju dvije dominantne boje unutar slike
         """
-        if out1:
+        if out1 and out2 and out3 and out4:
             if np.allclose(self.dominantColor2, np.array([[64], [64]]), atol=64):
-                self.image = out1(image=self.image)
+                out1()
             elif np.allclose(self.dominantColor2, np.array([[64], [192]]), atol=64):
-                self.image = out2(image=self.image)
+                out2()
             elif np.allclose(self.dominantColor2, np.array([[192], [64]]), atol=64):
-                self.image = out3(image=self.image)
+                out3()
             elif np.allclose(self.dominantColor2, np.array([[192], [192]]), atol=64):
-                self.image = out4(image=self.image)
-
+                out4()
 
     def dominantColor1Bipolar(self, out1, out2, image=None):
         """
         Odluka izlaza na temelju dominantne boje unutar slike, odluka je tamna ili svijetla pozadina
         """
-        if out1:
+        if out1 and out2:
             if np.allclose(self.dominantColor1, np.array([0]), atol=128):
-                self.image = out1(image=self.image)
+                out1()
             else:
-                self.image = out2(image=self.image)
-
+                out2()
 
     def dominantColor1Quadraple(self, out1, out2, out3, out4, image=None):
         """
         Odluka izlaza na temelju dominantne boje unutar slike, odluka je unutar jedne od četiri kategorije
         """
-        if out1:
+        if out1 and out2 and out3 and out4:
             if np.allclose(self.dominantColor1, np.array([32]), atol=32):
-                self.image = out1(image=self.image)
+                out1()
             elif np.allclose(self.dominantColor1, np.array([96]), atol=32):
-                self.image = out2(image=self.image)
+                out2()
             elif np.allclose(self.dominantColor1, np.array([160]), atol=32):
-                self.image = out3(image=self.image)
+                out3()
             elif np.allclose(self.dominantColor1, np.array([224]), atol=32):
-                self.image = out4(image=self.image)
+                out4()
 
+    def transform(self, func, kernel):
+        self.image = func(self.image, kernel)
 
     def process(self, original, mask, no_cells, individual):
         """
@@ -74,20 +73,14 @@ class ImageProcessor(object):
         :return:Vrijednost detektirane slike
         """
         self._reset(original, mask)
-        cv2.imshow("Prije", self.image)
-        tree = gp.PrimitiveTree(individual)
-        gp.compile(tree, pset)
-
-
-        detected_cells = image_process.get_number_of_cells(cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY))
+        eval(str(individual), pset.context, {})
+        self.image = image_process.otsu_treshold(self.image)
+        detected_cells = image_process.get_number_of_cells(self.image)
 
         if detected_cells > 2 * no_cells: detected_cells = 0
 
         det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
 
-        self.image = image_process.otsu_treshold(self.image)
-        cv2.imshow("threshold", self.image)
-        cv2.waitKey()
         return morphology_transformation.compare(self.image, self.mask) * det
 
 
@@ -98,20 +91,28 @@ pset.addPrimitive(iprocessor.dominantColor2Quadraple, 4)
 pset.addPrimitive(iprocessor.dominantColor1Bipolar, 2)
 pset.addPrimitive(iprocessor.dominantColor1Quadraple, 4)
 
+
+class Transform:
+    def __init__(self, func, kernel):
+        self.func = func
+        self.kernel = kernel
+
+    def callTrans(self):
+        iprocessor.transform(self.func, self.kernel)
+
+
+l =  []
 for i in range(4):
     for j in range(1, 28):
-        pset.addTerminal(
-            lambda image: morphology_transformation.defined_transforms[i](
-                image,
-                kernel=structuring_elements.elements.get(j)
-            ), "MT{}{}".format(i, j)
-        )
+        t = Transform(morphology_transformation.defined_transforms[i],structuring_elements.elements.get(j))
+        pset.addTerminal(t.callTrans, "MT{}{}".format(i,j))
+
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
-toolbox.register("expr_init", gp.genHalfAndHalf, pset=pset, min_=1, max_=3)
+toolbox.register("expr_init", gp.genHalfAndHalf, pset=pset, min_=1, max_=5)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
@@ -139,8 +140,12 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 # Otkomentirati liniju za paralelizam (parametri: -m scoop)
 # toolbox.register("map", futures.map)
 
+def statistacs(pop):
+    return pop
+
 
 def main():
+    random.seed(1000)
     pop = toolbox.population(n=POPULATION_SIZE)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -148,6 +153,7 @@ def main():
     stats.register("std", np.std)
     stats.register("min", np.min)
     stats.register("max", np.max)
+    stats.register("statistacs", statistacs)
 
     algorithms.eaSimple(pop, toolbox,
                         cxpb=CROSS_PROBABILITY,
