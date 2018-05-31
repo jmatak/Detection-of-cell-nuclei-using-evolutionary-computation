@@ -3,13 +3,13 @@ from deap import base, creator, tools, algorithms
 import image_process
 # Paralelizam
 from scoop import futures
-import numpy
 import morphology_transformation
 import morpho_util
 from parameters import *
 import sys
 import joblib
-import matplotlib.pyplot as plt
+import util
+
 
 # Kreiranje funkcije fitnesa i opis jedinke
 # Jedinka je lista Morfoloških transformacija
@@ -31,67 +31,18 @@ toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
 # Otkomentirati liniju za paralelizam (parametri: -m scoop)
 # toolbox.register("map", futures.map)
 
-def printBest(pop):
-    best = max(pop, key=lambda x: x[1][0])
-    return str(best[0])
-
-
-maxValues = []
-populationMovement = []
-
-
-def graphInfo(pop):
-    pop = [p[1][0] for p in pop]
-    for p in pop: populationMovement.append(p)
-
-
-def calculate_max(pop):
-    pop = [p[1][0] for p in pop]
-    m = numpy.max(pop)
-    maxValues.append(m)
-    return m
-
-
-def calculate_min(pop):
-    pop = [p[1][0] for p in pop]
-    return numpy.min(pop)
-
-
-def calculate_mean(pop):
-    pop = [p[1][0] for p in pop]
-    return numpy.mean(pop)
-
-
-def calculate_std(pop):
-    pop = [p[1][0] for p in pop]
-    return numpy.std(pop)
-
-
-def calculate_median(pop):
-    pop = [p[1][0] for p in pop]
-    return numpy.median(pop)
-
-
-def makePlots():
-    plt.plot(numpy.array(maxValues))
-    plt.savefig('plots/kretanje_max')
-    plt.close()
-    plt.boxplot(numpy.array(populationMovement))
-    plt.savefig('plots/kretanje_jedinke')
-    plt.close()
-
 
 def genetics():
     pop = toolbox.population(n=POPULATION_SIZE)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: (ind, ind.fitness.values))
-    stats.register("INDIVIDUAL", printBest)
-    stats.register("MED", calculate_median)
-    stats.register("AVG", calculate_mean)
-    stats.register("STD", calculate_std)
-    stats.register("MIN", calculate_min)
-    stats.register("MAX", calculate_max)
-    stats.register("GRAPH", graphInfo)
+    stats.register("INDIVIDUAL", util.printBest)
+    stats.register("MED", util.calculate_median)
+    stats.register("AVG", util.calculate_mean)
+    stats.register("STD", util.calculate_std)
+    stats.register("MIN", util.calculate_min)
+    stats.register("MAX", util.calculate_max)
+    stats.register("GRAPH", util.graphInfo)
 
     print('Program bez transformacije slike : {}'.format(morphology_transformation.evaluate([])))
     pop, logbook = algorithms.eaSimple(pop, toolbox,
@@ -100,7 +51,7 @@ def genetics():
                                        ngen=NUMB_OF_GENERATIONS,
                                        stats=stats, halloffame=hof, verbose=True)
 
-    makePlots()
+    util.makePlots()
     return pop, logbook, hof
 
 
@@ -120,26 +71,19 @@ def main():
         print("Nedovoljno ulaznih argumenata, molim odaberite -g ili -c")
         return
 
-    if len(sys.argv) >= 3:
-        if sys.argv[2] == '-s':
-            morphology_transformation.compareFunction = morphology_transformation.simple_compare
-        elif sys.argv[2] == '-stn':
-            morphology_transformation.compareFunction = morphology_transformation.simple_compare_without_tn
-        elif sys.argv[2] == '-w':
-            morphology_transformation.compareFunction = morphology_transformation.compare_weighted
-        else:
-            print("Nevaljan ulazni parametar, molim odaberite -reg ili irr")
-            return
+    if '-s' in sys.argv:
+        morphology_transformation.compareFunction = morphology_transformation.simple_compare
+    elif '-stn' in sys.argv:
+        morphology_transformation.compareFunction = morphology_transformation.simple_compare_without_tn
+    elif '-w' in sys.argv:
+        morphology_transformation.compareFunction = morphology_transformation.compare_weighted
 
-    if len(sys.argv) >= 4:
-        if sys.argv[3] == '-irr':
-            morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel_by_value
-            morphology_transformation.randomKernel = morpho_util.get_random_irregural_kernel
-        elif sys.argv[3] == '-reg':
-            morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel
-            morphology_transformation.randomKernel = morpho_util.get_random_kernel
-        else:
-            print("Nevaljan ulazni parametar, molim odaberite -s, -stn, -w")
+    if '-irr' in sys.argv:
+        morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel_by_value
+        morphology_transformation.randomKernel = morpho_util.get_random_irregural_kernel
+    elif '-reg' in sys.argv:
+        morphology_transformation.kernelMutationFunction = morphology_transformation._mutate_kernel
+        morphology_transformation.randomKernel = morpho_util.get_random_kernel
 
     if sys.argv[1] == '-g':
         view([])

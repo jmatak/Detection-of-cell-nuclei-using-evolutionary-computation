@@ -8,8 +8,8 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap import gp
+import util
 import numpy as np
-import random
 
 class ImageProcessor():
     """
@@ -75,13 +75,8 @@ class ImageProcessor():
         self._reset(original, mask)
         eval(str(individual), pset.context, {})
         self.image = image_process.otsu_treshold(self.image)
-        detected_cells = image_process.get_number_of_cells(self.image)
 
-        if detected_cells > 2 * no_cells: detected_cells = 0
-
-        det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
-
-        return morphology_transformation.compare(self.image, self.mask) * det
+        return morphology_transformation.compare(self.image, self.mask, no_cells)
 
 
 iprocessor = ImageProcessor()
@@ -145,15 +140,16 @@ def statistacs(pop):
 
 
 def main():
-    random.seed(1000)
     pop = toolbox.population(n=POPULATION_SIZE)
     hof = tools.HallOfFame(1)
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-    stats.register("min", np.min)
-    stats.register("max", np.max)
-    stats.register("statistacs", statistacs)
+    stats = tools.Statistics(lambda ind: (ind, ind.fitness.values))
+    stats.register("INDIVIDUAL", util.printBest)
+    stats.register("MED", util.calculate_median)
+    stats.register("AVG", util.calculate_mean)
+    stats.register("STD", util.calculate_std)
+    stats.register("MIN", util.calculate_min)
+    stats.register("MAX", util.calculate_max)
+    stats.register("GRAPH", util.graphInfo)
 
     algorithms.eaSimple(pop, toolbox,
                         cxpb=CROSS_PROBABILITY,
@@ -161,6 +157,7 @@ def main():
                         ngen=NUMB_OF_GENERATIONS,
                         stats=stats, halloffame=hof)
 
+    util.makePlots()
     return pop, hof, stats
 
 

@@ -54,7 +54,7 @@ def setImage():
     processed = ImageTk.PhotoImage(processed)
     contours = ImageTk.PhotoImage(contours)
 
-    if panelA is None or panelB is None:
+    if panelA is None or panelB is None or panelC is None:
         panelA = Label(root, image=image)
         panelA.image = image
         panelA.pack(side="top", padx=10, pady=10)
@@ -94,10 +94,10 @@ def viewer(ind):
 
     downPanel = Frame(root)
     btnImage = Button(downPanel, text="Odaberi sliku", command=select_image)
-    btnImage.pack(side="right", padx=10, pady=10)
+    btnImage.pack(side="left", padx=10, pady=10)
 
     btnTrans = Button(downPanel, text="Odaberi transformaciju", command=select_transformation)
-    btnTrans.pack(side="left", padx=10, pady=10)
+    btnTrans.pack(side="right", padx=10, pady=10)
 
     downPanel.pack(side="bottom")
     root.mainloop()

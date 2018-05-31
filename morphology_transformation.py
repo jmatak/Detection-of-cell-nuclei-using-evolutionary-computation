@@ -9,7 +9,6 @@ import numpy as np
 
 cv2.useOptimized()
 
-
 class MorphologyTransformation:
     """
     Klasa koja definira morfološku trasnformaciju koja se sastoji od Transformacije i njoj pripadnog strukturnog
@@ -32,7 +31,7 @@ def dilate(image, kernel):
     return cv2.dilate(image, kernel)
 
 
-def open(image, kernel):
+def open(image, kernel, newline='\n'):
     return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
 
 
@@ -73,7 +72,19 @@ def compare_weighted(tp, tn, fp, fn):
     return ((tp) / (tp + fn + fp)) * 100
 
 
-def compare(processed, mask):
+def compare(processed, mask, no_cells):
+    return compare_image(processed, mask) * compare_cells(processed, no_cells)
+
+
+def compare_cells(processed, no_cells):
+    detected_cells = image_process.get_number_of_cells(processed)
+    if detected_cells > 2 * no_cells: detected_cells = 0
+
+    det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
+    return det
+
+
+def compare_image(processed, mask):
     """
     Funkcija za usporedbu procesuirane slike i njoj pripadne maske.
 
@@ -99,6 +110,7 @@ def compare(processed, mask):
     return compareFunction(tp, tn, fp, fn)
 
 
+
 def evaluate(individual):
     """
     Evaluacija jedinke, usporedba s pripadnom maskom.
@@ -108,18 +120,11 @@ def evaluate(individual):
     """
     sum = 0
     for i, (name, info) in enumerate(image_process.IMAGES_WITH_INFO.items()):
-        if i == TRAIN_NO:
-            break
+        if i == TRAIN_NO: break
 
         image, gray_image, mask, no_cells = info
         processed = image_process.process_image(copy.copy(image), individual)
-        detected_cells = image_process.get_number_of_cells(processed)
-
-        if detected_cells > 2 * no_cells: detected_cells = 0
-
-        det = (detected_cells / no_cells) if detected_cells <= no_cells else 2 - (detected_cells / no_cells)
-
-        sum += compare(processed, mask) * det
+        sum += compare(processed, mask, no_cells)
 
     return (sum / TRAIN_NO),
 
